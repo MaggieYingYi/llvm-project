@@ -84,7 +84,7 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
   return res;
 }
 
-#ifndef SANITIZER_APPLE
+#if !SANITIZER_APPLE
 INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF64_T offset) {
   void *res = REAL(mmap64)(addr, length, prot, flags, fd, offset);
@@ -154,35 +154,54 @@ INTERCEPTOR(void *, valloc, uptr size) {
   return res;
 }
 
-#ifndef SANITIZER_APPLE
+#if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void *, memalign, uptr alignment, uptr size) {
   void *res = REAL(memalign)(alignment, size);
   if (res)
     tysan_set_type_unknown(res, size);
   return res;
 }
+#define TYSAN_MAYBE_INTERCEPT_MEMALIGN INTERCEPT_FUNCTION(memalign)
+#else
+#define TYSAN_MAYBE_INTERCEPT_MEMALIGN
+#endif // SANITIZER_INTERCEPT_MEMALIGN
 
+#if SANITIZER_INTERCEPT___LIBC_MEMALIGN
 INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
   void *res = REAL(__libc_memalign)(alignment, size);
   if (res)
     tysan_set_type_unknown(res, size);
   return res;
 }
+#define TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN                                  \
+  INTERCEPT_FUNCTION(__libc_memalign)
+#else
+#define TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN
+#endif // SANITIZER_INTERCEPT___LIBC_MEMALIGN
 
+#if SANITIZER_INTERCEPT_PVALLOC
 INTERCEPTOR(void *, pvalloc, uptr size) {
   void *res = REAL(pvalloc)(size);
   if (res)
     tysan_set_type_unknown(res, size);
   return res;
 }
-#endif
+#define TYSAN_MAYBE_INTERCEPT_PVALLOC INTERCEPT_FUNCTION(pvalloc)
+#else
+#define TYSAN_MAYBE_INTERCEPT_PVALLOC
+#endif // SANITIZER_INTERCEPT_PVALLOC
 
+#if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 INTERCEPTOR(void *, aligned_alloc, uptr alignment, uptr size) {
   void *res = REAL(aligned_alloc)(alignment, size);
   if (res)
     tysan_set_type_unknown(res, size);
   return res;
 }
+#define TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC INTERCEPT_FUNCTION(aligned_alloc)
+#else
+#define TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
+#endif
 
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr alignment, uptr size) {
   int res = REAL(posix_memalign)(memptr, alignment, size);
@@ -216,10 +235,10 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(free);
   INTERCEPT_FUNCTION(realloc);
   INTERCEPT_FUNCTION(valloc);
-  INTERCEPT_FUNCTION(memalign);
-  INTERCEPT_FUNCTION(__libc_memalign);
-  INTERCEPT_FUNCTION(pvalloc);
-  INTERCEPT_FUNCTION(aligned_alloc);
+  TYSAN_MAYBE_INTERCEPT_MEMALIGN;
+  TYSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN;
+  TYSAN_MAYBE_INTERCEPT_PVALLOC;
+  TYSAN_MAYBE_INTERCEPT_ALIGNED_ALLOC
   INTERCEPT_FUNCTION(posix_memalign);
 
   INTERCEPT_FUNCTION(memset);

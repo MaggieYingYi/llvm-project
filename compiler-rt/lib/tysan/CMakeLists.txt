@@ -46,4 +46,19 @@ if(APPLE)
     CFLAGS ${TYSAN_CFLAGS}
     DEFS ${TYSAN_COMMON_DEFINITIONS}
     PARENT_TARGET tysan)
+else()
+  foreach(arch ${TYSAN_SUPPORTED_ARCH})
+    set(TYSAN_CFLAGS ${TYSAN_COMMON_CFLAGS})
+    append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE TYSAN_CFLAGS)
+    add_compiler_rt_runtime(clang_rt.tysan
+      STATIC
+      ARCHS ${arch}
+      SOURCES ${TYSAN_SOURCES}
+              $<TARGET_OBJECTS:RTInterception.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      CFLAGS ${TYSAN_CFLAGS}
+      PARENT_TARGET tysan)
+  endforeach()
 endif()
