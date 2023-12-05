@@ -390,7 +390,7 @@ static bool usingSanitizeType(const Value *V) {
 AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
                                      const MemoryLocation &LocB,
                                      AAQueryInfo &AAQI, const Instruction *) {
-  if (!EnableTBAA)
+  if (!EnableTBAA || usingSanitizeType(LocA.Ptr) || usingSanitizeType(LocB.Ptr))
     return AliasResult::MayAlias;
 
   if (Aliases(LocA.AATags.TBAA, LocB.AATags.TBAA))
@@ -403,7 +403,7 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
 ModRefInfo TypeBasedAAResult::getModRefInfoMask(const MemoryLocation &Loc,
                                                 AAQueryInfo &AAQI,
                                                 bool IgnoreLocals) {
-  if (!EnableTBAA || usingSanitizeType(LocA.Ptr) || usingSanitizeType(LocB.Ptr))
+  if (!EnableTBAA)
     return ModRefInfo::ModRef;
 
   const MDNode *M = Loc.AATags.TBAA;

@@ -140,9 +140,9 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
   // Initialize the callbacks.
   TysanCheck = cast<Function>(
       M.getOrInsertFunction(kTysanCheckName, Attr, IRB.getVoidTy(),
-                            IRB.getInt8PtrTy(), // Pointer to data to be read.
+                            IRB.getPtrTy(),  // Pointer to data to be read.
                             OrdTy,              // Size of the data in bytes.
-                            IRB.getInt8PtrTy(), // Pointer to type descriptor.
+                            IRB.getPtrTy(), // Pointer to type descriptor.
                             OrdTy               // Flags.
                             )
           .getCallee());
@@ -597,13 +597,13 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
   if (TBAAMD)
     TDGV = TypeDescriptors[TBAAMD];
   else
-    TDGV = Constant::getNullValue(IRB.getInt8PtrTy());
+    TDGV = Constant::getNullValue(IRB.getPtrTy());
 
-  Value *TD = IRB.CreateBitCast(TDGV, IRB.getInt8PtrTy());
+  Value *TD = IRB.CreateBitCast(TDGV, IRB.getPtrTy());
 
   Value *ShadowDataInt = ConvertToShadowDataInt(IRB, Ptr, IntptrTy, PtrShift,
                                                 ShadowBase, AppMemMask);
-  Type *Int8PtrPtrTy = IRB.getInt8PtrTy()->getPointerTo();
+  Type *Int8PtrPtrTy = IRB.getPtrTy()->getPointerTo();
   Value *ShadowData =
       IRB.CreateIntToPtr(ShadowDataInt, Int8PtrPtrTy, "shadow.ptr");
 
@@ -623,7 +623,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
       // i bytes after the first byte of the type.
       Value *BadTD =
           IRB.CreateIntToPtr(ConstantInt::getSigned(IntptrTy, -i),
-                             IRB.getInt8PtrTy(), "bad.descriptor" + Twine(i));
+                             IRB.getPtrTy(), "bad.descriptor" + Twine(i));
       IRB.CreateStore(BadTD, BadShadowData);
     }
   };
@@ -640,7 +640,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
         ConstantInt::get(OrdTy, (int)IsRead | (((int)IsWrite) << 1));
 
     Value *LoadedTD =
-        IRB.CreateLoad(IRB.getInt8PtrTy(), ShadowData, "shadow.desc");
+        IRB.CreateLoad(IRB.getPtrTy(), ShadowData, "shadow.desc");
     if (SanitizeFunction) {
       Value *BadTDCmp = IRB.CreateICmpNE(LoadedTD, TD, "bad.desc");
       Instruction *BadTDTerm, *GoodTDTerm;
@@ -667,7 +667,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
             IRB.CreateAdd(ShadowDataInt,
                           ConstantInt::get(IntptrTy, i << PtrShift)),
             Int8PtrPtrTy);
-        Value *ILdTD = IRB.CreateLoad(IRB.getInt8PtrTy(), UnkShadowData);
+        Value *ILdTD = IRB.CreateLoad(IRB.getPtrTy(), UnkShadowData);
         NotAllUnkTD = IRB.CreateOr(NotAllUnkTD, IRB.CreateIsNotNull(ILdTD));
       }
 
@@ -675,7 +675,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
       Instruction *BadUTDTerm = SplitBlockAndInsertIfThen(
           NotAllUnkTD, BeforeSetType, false, UnlikelyBW);
       IRB.SetInsertPoint(BadUTDTerm);
-      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy()),
+      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()),
                                   Size, (Value *)TD, (Value *)Flags});
 
       IRB.SetInsertPoint(BeforeSetType);
@@ -683,7 +683,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 
       // We have a non-trivial mismatch. Call the runtime.
       IRB.SetInsertPoint(MismatchTerm);
-      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy()),
+      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()),
                                   Size, (Value *)TD, (Value *)Flags});
 
       // We appear to have the right type. Make sure that all other bytes in
@@ -696,7 +696,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
                           ConstantInt::get(IntptrTy, i << PtrShift)),
             Int8PtrPtrTy);
         Value *ILdTD = IRB.CreatePtrToInt(
-            IRB.CreateLoad(IRB.getInt8PtrTy(), BadShadowData), IntptrTy);
+            IRB.CreateLoad(IRB.getPtrTy(), BadShadowData), IntptrTy);
         NotAllBadTD = IRB.CreateOr(
             NotAllBadTD,
             IRB.CreateICmpSGE(ILdTD, ConstantInt::get(IntptrTy, 0)));
@@ -705,7 +705,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
       Instruction *BadITDTerm = SplitBlockAndInsertIfThen(
           NotAllBadTD, &*IRB.GetInsertPoint(), false, UnlikelyBW);
       IRB.SetInsertPoint(BadITDTerm);
-      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy()),
+      IRB.CreateCall(TysanCheck, {IRB.CreateBitCast(Ptr, IRB.getPtrTy()),
                                   Size, (Value *)TD, (Value *)Flags});
     } else {
       // If we're not sanitizing this function, then we only care whether we
@@ -832,7 +832,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Value *&ShadowBase,
           IRB.CreateAnd(IRB.CreatePtrToInt(Dest, IntptrTy), AppMemMask),
           PtrShift),
       ShadowBase);
-  Value *ShadowData = IRB.CreateIntToPtr(ShadowDataInt, IRB.getInt8PtrTy());
+  Value *ShadowData = IRB.CreateIntToPtr(ShadowDataInt, IRB.getPtrTy());
 
   if (!Src) {
     IRB.CreateMemSet(ShadowData, IRB.getInt8(0), IRB.CreateShl(Size, PtrShift),
@@ -845,8 +845,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Value *&ShadowBase,
           IRB.CreateAnd(IRB.CreatePtrToInt(Src, IntptrTy), AppMemMask),
           PtrShift),
       ShadowBase);
-  Value *SrcShadowData =
-      IRB.CreateIntToPtr(SrcShadowDataInt, IRB.getInt8PtrTy());
+  Value *SrcShadowData = IRB.CreateIntToPtr(SrcShadowDataInt, IRB.getPtrTy());
 
   if (NeedsMemMove) {
     IRB.CreateMemMove(ShadowData, Align(1u << PtrShift), SrcShadowData,
