@@ -3,7 +3,7 @@
 ; included, which requires the multi process flag to interpret, meaning we don't
 ; need a test when the flag is off
 
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/fork-nocs-noprobe.perfscript --binary=%S/Inputs/fork-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/fork-nocs-noprobe.perfscript --binary=%S/Inputs/fork-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
 
 ; Check that we get samples from both processes

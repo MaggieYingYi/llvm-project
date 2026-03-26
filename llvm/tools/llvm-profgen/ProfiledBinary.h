@@ -219,7 +219,7 @@ class ProfiledBinary {
   // (DefaultPID defined in PerfReaderBase).
   std::unordered_map<int32_t, uint64_t> BaseAddressByPID;
   // The last PID we saw the binary loaded into. Used to warn the user if a
-  // binary is loaded in multiple processes without --multi-process-profile.
+  // binary is loaded in multiple processes.
   std::optional<int32_t> LastSeenPID = std::nullopt;
   // The runtime base address that the first loadabe segment is loaded at.
   uint64_t FirstLoadableAddress = 0;
@@ -463,6 +463,12 @@ public:
       return;
 
     setBaseAddress(NewPID, Pos->second);
+  }
+  size_t getBaseAddressSize() const { return BaseAddressByPID.size(); }
+  int32_t getOnlyPIDInBaseAddress() const {
+    assert(BaseAddressByPID.size() == 1 &&
+           "BaseAddressByPID should only contain one PID.");
+    return BaseAddressByPID.begin()->first;
   }
 
   bool isCOFF() const { return IsCOFF; }

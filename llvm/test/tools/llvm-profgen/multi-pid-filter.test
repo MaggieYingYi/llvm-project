@@ -1,6 +1,6 @@
 ; Test that the --pid argument works, including when passing multiple PIDs
 
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile --pid=149754
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --pid=149754
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-FIRST-ONLY
 
 CHECK-FIRST-ONLY-NOT: loop2
@@ -12,7 +12,7 @@ CHECK-FIRST-ONLY-NEXT: 2: 0
 
 CHECK-FIRST-ONLY-NOT: loop2
 
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile --pid=149755
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --pid=149755
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-SECOND-ONLY
 
 CHECK-SECOND-ONLY-NOT: loop1
@@ -24,7 +24,7 @@ CHECK-SECOND-ONLY-NEXT: 2: 0
 
 CHECK-SECOND-ONLY-NOT: loop1
 
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile --pid=149754,149755
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --pid=149754,149755
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-BOTH
 
 CHECK-BOTH: loop1:1302:0

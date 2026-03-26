@@ -1,7 +1,7 @@
 ; Check that we can handle profiles with multiple processes, using pseudo probes
 ; and a context-sensitive profile
 
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-cs-probe.perfscript --binary=%S/Inputs/multi-process-cs-probe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-cs-probe.perfscript --binary=%S/Inputs/multi-process-cs-probe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
 
 CHECK:      loop1:93:0
