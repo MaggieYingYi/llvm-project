@@ -62,7 +62,7 @@ static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
     cl::cat(ProfGenCategory));
 
 static cl::opt<bool> MultiProcessProfile(
-    "multi-process-profile",
+    "multi-process-profile", cl::init(true),
     cl::desc("Handle multiple instances of the binary loaded in different "
              "processes as if they came from one process, effectively summing "
              "their samples. perf script input must include the PID field."),
