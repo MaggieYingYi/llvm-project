@@ -449,6 +449,12 @@ public:
 
     setBaseAddress(NewPID, Pos->second);
   }
+  size_t getBaseAddressSize() const { return BaseAddressByPID.size(); }
+  int32_t getOnlyPIDInBaseAddress() const {
+    assert(BaseAddressByPID.size() == 1 &&
+           "BaseAddressByPID should only contain one PID.");
+    return BaseAddressByPID.begin()->first;
+  }
 
   bool isCOFF() const { return IsCOFF; }
 

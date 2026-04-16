@@ -1,7 +1,7 @@
 ; Like fork-nocs-noprobe.perfscript, but with pseudo probes and a
 ; context-sensitive profile
 
-; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/fork-cs-probe.perfscript --binary=%S/Inputs/fork-cs-probe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/fork-cs-probe.perfscript --binary=%S/Inputs/fork-cs-probe.perfbin --output=%t --profile-summary-cold-count=0
 ; RUN: FileCheck %s --input-file %t
 
 ; Check that we get samples from both processes

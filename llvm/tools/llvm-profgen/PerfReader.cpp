@@ -699,13 +699,36 @@ bool PerfScriptReader::extractLBRStack(std::optional<int32_t> PIDIfKnown,
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
   // It's in FIFO order and separated by whitespace.
-  SmallVector<StringRef, 32> Records;
-  TraceIt.getCurrentLine().trim().split(Records, " ", -1, false);
+  // It may be prefixed by a PID and LeadingAddr.
+
+//  constexpr static llvm::StringRef LBRHeaderPattern =
+//     R"(^[[:space:]]*([0-9]+[[:space:]]+)?([0-9A-Fa-f]+[[:space:]]+|0x[0-9A-Fa-f]+[[:space:]]+)?(0x[0-9A-Fa-f]+/.*)[[:space:]]*$)";
+
+  constexpr static llvm::StringRef LBRHeaderPattern =
+      R"(^[[:space:]]*([0-9]+[[:space:]]+)?(0x[0-9A-Fa-f]+[[:space:]]+|[0-9A-Fa-f]+[[:space:]]+)?([[:space:]]*0x[0-9A-Fa-f]+/.*)[[:space:]]*$)";
+
+  StringRef Line = TraceIt.getCurrentLine();
+
   auto WarnInvalidLBR = [](TraceStream &TraceIt) {
     WithColor::warning() << "Invalid address in LBR record at line "
                          << TraceIt.getLineNumber() << ": "
                          << TraceIt.getCurrentLine() << "\n";
   };
+
+  SmallVector<StringRef, 4> Fields;
+  Regex RegLBRStack(LBRHeaderPattern);
+
+  if (!RegLBRStack.match(Line, &Fields)) {
+    WarnInvalidLBR(TraceIt);
+    TraceIt.advance();
+    return false;
+  }
+
+  bool hasPID = !Fields[1].empty();
+  bool hasLeadingAddr = !Fields[2].empty();
+
+  SmallVector<StringRef, 32> Records;
+  Line.trim().split(Records, " ", -1, false);
 
   // Skip the leading instruction pointer.
   size_t Index = 0;
@@ -713,12 +736,12 @@ bool PerfScriptReader::extractLBRStack(std::optional<int32_t> PIDIfKnown,
   int32_t PID = DefaultPID;
   uint64_t LeadingAddr;
 
-  if (Records.size() < (MultiProcessProfile ? 2 : 1)) {
+  if (Records.size() < (hasPID ? 2 : 1)) {
     WarnInvalidLBR(TraceIt);
     TraceIt.advance();
     return false;
   }
-
+  /*
   if (MultiProcessProfile) {
     // If we read the PID elsewhere, use that instead of trying to read it here
     if (PIDIfKnown.has_value()) {
@@ -732,8 +755,19 @@ bool PerfScriptReader::extractLBRStack(std::optional<int32_t> PIDIfKnown,
       Index++;
     }
   }
+  */
 
-  if (!Records.empty() && !Records[0].contains('/')) {
+  // If we read the PID elsewhere, use that instead of trying to read it here
+  if (PIDIfKnown.has_value()) {
+    PID = PIDIfKnown.value();
+  } else if (hasPID) {
+    Records[Index].getAsInteger(10, PID);
+    Index++;
+  } else if (Binary->getBaseAddressSize() == 1) {
+    PID = Binary->getOnlyPIDInBaseAddress();
+  }
+
+  if (hasLeadingAddr) {
     if (Records[Index].getAsInteger(16, LeadingAddr)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
@@ -882,6 +916,7 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 #endif
   // Default to a default PID value
   int32_t PID = DefaultPID;
+  /*
   if (MultiProcessProfile) {
     // Parse the PID at the beginning of the sample
     StringRef FirstLine = TraceIt.getCurrentLine();
@@ -895,6 +930,15 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
     }
     TraceIt.advance();
   }
+  */
+
+  // Parse the PID at the beginning of the sample
+  StringRef FirstLine = TraceIt.getCurrentLine();
+  if (!FirstLine.trim().getAsInteger(10, PID))
+    TraceIt.advance();
+  // Get the PID from BaseAddressByPID.
+  if (PID == DefaultPID && Binary->getBaseAddressSize() == 1)
+    PID = Binary->getOnlyPIDInBaseAddress();
 
   // Parsing call stack and populate into PerfSample.CallStack
   if (!extractCallstack(PID, TraceIt, Sample->CallStack)) {
@@ -1336,7 +1380,7 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
   // Short cut to avoid string find is possible.
   if (Line.empty() || Line.size() < 50)
     return false;
-
+  /*
   auto Trimmed = Line;
   if (MultiProcessProfile)
     // Trim off the first numeric field, which is the PID.
@@ -1345,7 +1389,7 @@ bool PerfScriptReader::isMMapEvent(StringRef Line) {
 
   if (Trimmed.empty() || std::isdigit(Trimmed[0]))
     return false;
-
+  */
   // PERF_RECORD_MMAP2 or PERF_RECORD_MMAP does not appear at the beginning of
   // the line for ` perf script  --show-mmap-events  -i ...`
   return Line.contains("PERF_RECORD_MMAP");
